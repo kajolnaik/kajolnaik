@@ -1,0 +1,51 @@
+import csv
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+# Step 1: Read the data from the CSV file
+data = []
+with open('datapao_homework_2023.csv', 'r') as csvfile:
+    csvreader = csv.reader(csvfile)
+    headers = next(csvreader)
+    for row in csvreader:
+        data.append(row)
+
+# Step 2: Preprocess the data and calculate time, days, and average per day
+user_data = defaultdict(lambda: {'time': 0, 'days': set()})
+for row in data:
+    user_id, timestamp = row[0], datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
+    action = row[2]
+
+    if timestamp.month == 2:
+        if action == 'IN':
+            user_data[user_id]['time'] -= timestamp.hour
+        elif action == 'OUT':
+            user_data[user_id]['time'] += timestamp.hour
+        user_data[user_id]['days'].add(timestamp.date())
+
+# Step 3: Calculate average and rank
+user_results = []
+for user_id, user_info in user_data.items():
+    time = user_info['time']
+    days = len(user_info['days'])
+    average_per_day = time / days
+    user_results.append((user_id, time, days, average_per_day))
+
+# Rank users by average_per_day
+user_results.sort(key=lambda x: x[3], reverse=True)
+for i, result in enumerate(user_results):
+    result += (i + 1,)  # Add rank to the result tuple
+
+# Step 4: Find the user with the longest work session
+longest_session = max(user_data, key=lambda x: user_data[x]['time'])
+
+# Step 5: Write the results to CSV files
+with open('output/first.csv', 'w', newline='') as csvfile:
+    csvwriter = csv.writer(csvfile)
+    csvwriter.writerow(['user_id', 'time', 'days', 'average_per_day', 'rank'])
+    csvwriter.writerows(user_results)
+
+with open('output/second.csv', 'w', newline='') as csvfile:
+    csvwriter = csv.writer(csvfile)
+    csvwriter.writerow(['user_id', 'session_length'])
+    csvwriter.writerow([longest_session, -user_data[longest_session]['time']])
